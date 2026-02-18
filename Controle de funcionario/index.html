@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestãoPro • Controle de Funcionários</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        :root {
+            --primary: #0d6efd;
+        }
+        
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #f8f9fa;
+        }
+        
+        .sidebar {
+            background: #1f2937;
+            color: white;
+            min-height: 100vh;
+            position: fixed;
+            width: 260px;
+            padding-top: 20px;
+        }
+        
+        .sidebar .nav-link {
+            color: #cbd5e1;
+            padding: 12px 24px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            background: #334155;
+            color: white;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .main-content {
+            margin-left: 260px;
+            min-height: 100vh;
+            padding: 30px;
+        }
+        
+        .card {
+            border: none;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+            transition: transform 0.2s;
+        }
+        
+        .card:hover {
+            transform: translateY(-4px);
+        }
+        
+        .table th {
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+        }
+        
+        .badge-operadora {
+            font-size: 0.85rem;
+            padding: 6px 14px;
+            border-radius: 50px;
+        }
+        
+        .bg-imile   { background-color: #0d6efd !important; color: white; }
+        .bg-polly   { background-color: #3b82f6 !important; color: white; }
+        .bg-d0      { background-color: #ef4444 !important; color: white; }
+
+        @media print {
+            .sidebar, .btn, .no-print, .modal-backdrop, .modal {
+                display: none !important;
+            }
+            .main-content {
+                margin-left: 0 !important;
+            }
+            body {
+                background: white !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="d-flex">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="px-4 py-3 border-bottom border-secondary">
+            <div class="d-flex align-items-center gap-3">
+                <i class="fas fa-briefcase fa-2x text-primary"></i>
+                <div>
+                    <h4 class="mb-0 text-white">GestãoPro</h4>
+                    <small class="text-muted">Controle de Equipe</small>
+                </div>
+            </div>
+        </div>
+        
+        <ul class="nav flex-column mt-4">
+            <li class="nav-item"><a href="#" onclick="showSection('dashboard')"     class="nav-link active" id="nav-dashboard"><i class="fas fa-tachometer-alt me-3"></i> Dashboard</a></li>
+            <li class="nav-item"><a href="#" onclick="showSection('funcionarios')"   class="nav-link" id="nav-funcionarios"><i class="fas fa-users me-3"></i> Funcionários</a></li>
+            <li class="nav-item"><a href="#" onclick="showSection('relatorios')"     class="nav-link" id="nav-relatorios"><i class="fas fa-file-alt me-3"></i> Relatórios</a></li>
+            <li class="nav-item"><a href="#" onclick="showSection('holerites')"      class="nav-link" id="nav-holerites"><i class="fas fa-file-invoice-dollar me-3"></i> Holerites</a></li>
+        </ul>
+        
+        <div class="position-absolute bottom-0 w-100 p-4">
+            <div class="d-flex align-items-center gap-3 text-white">
+                <img src="https://i.pravatar.cc/40" class="rounded-circle" width="40" height="40" alt="Usuário">
+                <div>
+                    <div class="fw-semibold">Admin</div>
+                    <small class="text-muted">Gestor RH</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content flex-grow-1">
+
+        <nav class="navbar navbar-light bg-white shadow-sm mb-4 rounded-3 px-4">
+            <div class="container-fluid">
+                <div class="d-flex align-items-center gap-3">
+                    <button class="btn btn-light d-md-none" onclick="document.querySelector('.sidebar').classList.toggle('d-none')"><i class="fas fa-bars"></i></button>
+                    <h1 class="header-title mb-0" id="page-title">Dashboard</h1>
+                </div>
+                <div class="d-flex align-items-center gap-4">
+                    <div class="position-relative">
+                        <input type="text" class="form-control ps-5" style="width:280px;" placeholder="Buscar funcionário..." id="global-search" oninput="globalSearch()">
+                        <i class="fas fa-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
+                    </div>
+                    <button type="button" class="btn btn-primary shadow-sm" onclick="openAddModal()">
+                        <i class="fas fa-plus me-2"></i> Novo Funcionário
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- ==================================================== -->
+        <!-- DASHBOARD -->
+        <!-- ==================================================== -->
+        <div id="dashboard" class="section active">
+            <div class="row g-4">
+                <div class="col-xl-3 col-md-6">
+                    <div class="card h-100 bg-primary text-white">
+                        <div class="card-body">
+                            <h6 class="opacity-75">Total de Funcionários</h6>
+                            <h2 class="mb-0 fw-bold" id="total-func">0</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-6">
+                    <div class="card h-100 bg-success text-white">
+                        <div class="card-body">
+                            <h6 class="opacity-75">Ativos</h6>
+                            <h2 class="mb-0 fw-bold" id="ativos-count">0</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-6">
+                    <div class="card h-100" style="background: linear-gradient(135deg, #3b82f6, #1e40af);">
+                        <div class="card-body text-white">
+                            <h6 class="opacity-75">Polly</h6>
+                            <h2 class="mb-0 fw-bold" id="polly-count">0</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-6">
+                    <div class="card h-100" style="background: linear-gradient(135deg, #f43f5e, #9f1239);">
+                        <div class="card-body text-white">
+                            <h6 class="opacity-75">D0</h6>
+                            <h2 class="mb-0 fw-bold" id="d0-count">0</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-5">
+                <div class="col-12 col-lg-8">
+                    <div class="card h-100">
+                        <div class="card-header bg-white border-0 py-4">
+                            <h5 class="mb-0">Distribuição por Operadora</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="operadoraChart" height="140"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-lg-4">
+                    <div class="card h-100">
+                        <div class="card-header bg-white border-0 py-4">
+                            <h5 class="mb-0">Últimos Adicionados</h5>
+                        </div>
+                        <div class="card-body p-0" id="recent-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================================================== -->
+        <!-- FUNCIONÁRIOS -->
+        <!-- ==================================================== -->
+        <div id="funcionarios" class="section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="header-title">Lista de Funcionários</h2>
+                <button type="button" class="btn btn-outline-secondary" onclick="clearSearch()">
+                    <i class="fas fa-eraser"></i> Limpar busca
+                </button>
+            </div>
+            
+            <div class="card">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" id="funcionarios-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="60">ID</th>
+                                <th>Nome Completo</th>
+                                <th>Operadora</th>
+                                <th>Cargo</th>
+                                <th>Admissão</th>
+                                <th>Status</th>
+                                <th width="180" class="text-end">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="funcionarios-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================================================== -->
+        <!-- RELATÓRIOS -->
+        <!-- ==================================================== -->
+        <div id="relatorios" class="section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="header-title">Relatório de Operadoras</h2>
+                <div class="d-flex gap-2">
+                    <select class="form-select w-auto" id="filtro-operadora" onchange="renderizarRelatorio()">
+                        <option value="">Todas as Operadoras</option>
+                        <option value="IMILE">IMILE</option>
+                        <option value="Polly">Polly</option>
+                        <option value="D0">D0</option>
+                    </select>
+                    <button type="button" class="btn btn-success" onclick="exportarCSV()">
+                        <i class="fas fa-file-csv me-2"></i> Exportar CSV
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="imprimirRelatorio()">
+                        <i class="fas fa-print me-2"></i> Imprimir
+                    </button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" id="relatorio-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nome</th>
+                                <th>Operadora</th>
+                                <th>Cargo</th>
+                                <th>Data de Admissão</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="relatorio-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================================================== -->
+        <!-- HOLERITES -->
+        <!-- ==================================================== -->
+        <div id="holerites" class="section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="header-title">Holerites</h2>
+                <select class="form-select w-auto" id="filtro-mes-ano"></select>
+            </div>
+            
+            <div class="card">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="60">ID</th>
+                                <th>Nome Completo</th>
+                                <th>Salário Bruto</th>
+                                <th>Descontos</th>
+                                <th>Salário Líquido</th>
+                                <th width="220" class="text-end">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="holerites-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Modal Funcionário -->
+<div class="modal fade" id="modalFuncionario" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-semibold" id="modal-title">Adicionar Funcionário</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="form-funcionario">
+                    <input type="hidden" id="edit-id">
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-medium">Nome Completo <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="input-nome" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-medium">Email <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" id="input-email" required>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-medium">Operadora <span class="text-danger">*</span></label>
+                            <select class="form-select" id="input-operadora" required>
+                                <option value="">Selecione</option>
+                                <option value="IMILE">IMILE</option>
+                                <option value="Polly">Polly</option>
+                                <option value="D0">D0</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-medium">Cargo</label>
+                            <input type="text" class="form-control" id="input-cargo">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-medium">Data de Admissão</label>
+                            <input type="date" class="form-control" id="input-admissao">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-medium">Status</label>
+                            <select class="form-select" id="input-status">
+                                <option value="Ativo" selected>Ativo</option>
+                                <option value="Inativo">Inativo</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-medium">Salário Base (R$)</label>
+                            <input type="number" step="0.01" min="0" class="form-control" id="input-salario" placeholder="0.00">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Descontos (ex: INSS:200, IR:150, VT:50)</label>
+                        <textarea class="form-control" id="input-descontos" rows="3" placeholder="Ex: INSS:200.00, IRRF:150.00, Vale Transporte:50.00"></textarea>
+                        <small class="form-text text-muted">Separe por vírgula. Use ponto como decimal.</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary px-5" onclick="salvarFuncionario()">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Holerite -->
+<div class="modal fade" id="modalHolerite" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-semibold">Pré-visualização do Holerite</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="holerite-content"></div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Fechar</button>
+                <button type="button" class="btn btn-secondary px-4" onclick="imprimirHolerite()">Imprimir</button>
+                <button type="button" class="btn btn-primary px-4" onclick="enviarHoleriteEmail()">Enviar por Email</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// ────────────────────────────────────────────────
+// Variáveis globais
+// ────────────────────────────────────────────────
+let funcionarios = [];
+let chartOperadora = null;
+let modalFuncionario = null;
+let modalHolerite   = null;
+let currentFuncId   = null;
+
+// ────────────────────────────────────────────────
+// Utilitários
+// ────────────────────────────────────────────────
+function formatarData(dataStr) {
+    if (!dataStr) return '—';
+    try {
+        return new Date(dataStr).toLocaleDateString('pt-BR');
+    } catch {
+        return '—';
+    }
+}
+
+function formatarMoeda(valor) {
+    if (typeof valor !== 'number' || isNaN(valor)) return 'R$ 0,00';
+    return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function parseDescontos(str = '') {
+    const obj = {};
+    if (!str.trim()) return obj;
+
+    str.split(/[,;]/).forEach(item => {
+        const partes = item.split(':');
+        if (partes.length < 2) return;
+        const chave = partes[0].trim();
+        const valorStr = partes.slice(1).join(':').trim();
+        const valor = parseFloat(valorStr.replace(',', '.'));
+        if (!isNaN(valor) && chave) {
+            obj[chave] = valor;
+        }
+    });
+    return obj;
+}
+
+function getMesAnoAtual() {
+    return new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+}
+
+// ────────────────────────────────────────────────
+// Persistência
+// ────────────────────────────────────────────────
+function carregarDados() {
+    try {
+        const salvos = localStorage.getItem('funcionariosGestaoPro');
+        if (salvos) {
+            funcionarios = JSON.parse(salvos);
+        } else {
+            funcionarios = [
+                { id: 1, nome: "Edimar",      email: "edimar@empresa.com",   operadora: "IMILE", cargo: "Líder",     admissao: "2023-01-01", status: "Ativo",   salario: 3000, descontos: "INSS:300, IR:200" },
+                { id: 2, nome: "Wilson",      email: "wilson@empresa.com",   operadora: "Polly", cargo: "Líder",     admissao: "2023-02-01", status: "Ativo",   salario: 2800, descontos: "INSS:280, IR:180" },
+                { id: 3, nome: "Manoel",      email: "manoel@empresa.com",   operadora: "D0",    cargo: "ADM",       admissao: "2023-03-01", status: "Ativo",   salario: 3500, descontos: "INSS:350, IR:250" },
+                { id: 4, nome: "Beatriz Lima",email: "beatriz@empresa.com",  operadora: "D0",    cargo: "Assistente",admissao: "2023-04-01", status: "Inativo", salario: 2200, descontos: "INSS:220, IR:150" }
+            ];
+            salvarDados();
+        }
+    } catch (e) {
+        console.error("Erro ao carregar dados:", e);
+        funcionarios = [];
+    }
+}
+
+function salvarDados() {
+    localStorage.setItem('funcionariosGestaoPro', JSON.stringify(funcionarios));
+}
+
+// ────────────────────────────────────────────────
+// Renderizações
+// ────────────────────────────────────────────────
+function getCorOperadora(op) {
+    if (op === 'Polly') return 'bg-polly';
+    if (op === 'D0')    return 'bg-d0';
+    if (op === 'IMILE') return 'bg-imile';
+    return 'bg-secondary';
+}
+
+function renderizarTabelaFuncionarios(lista = funcionarios) {
+    const tbody = document.getElementById('funcionarios-tbody');
+    tbody.innerHTML = '';
+
+    lista.forEach(f => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><strong>#${f.id}</strong></td>
+            <td>${f.nome}</td>
+            <td><span class="badge badge-operadora ${getCorOperadora(f.operadora)}">${f.operadora}</span></td>
+            <td>${f.cargo || '—'}</td>
+            <td>${formatarData(f.admissao)}</td>
+            <td><span class="badge ${f.status === 'Ativo' ? 'bg-success' : 'bg-secondary'}">${f.status}</span></td>
+            <td class="text-end">
+                <button type="button" class="btn btn-sm btn-outline-primary me-1" onclick="abrirEditar(${f.id})"><i class="fas fa-edit"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-danger me-1" onclick="excluirFuncionario(${f.id})"><i class="fas fa-trash"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-success" onclick="gerarHolerite(${f.id})"><i class="fas fa-file-invoice"></i></button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function renderizarRelatorio() {
+    const filtro = document.getElementById('filtro-operadora').value;
+    const lista = filtro ? funcionarios.filter(f => f.operadora === filtro) : funcionarios;
+    const tbody = document.getElementById('relatorio-tbody');
+    tbody.innerHTML = '';
+
+    lista.forEach(f => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${f.nome}</td>
+            <td><span class="badge badge-operadora ${getCorOperadora(f.operadora)}">${f.operadora}</span></td>
+            <td>${f.cargo || '—'}</td>
+            <td>${formatarData(f.admissao)}</td>
+            <td><span class="badge ${f.status === 'Ativo' ? 'bg-success' : 'bg-secondary'}">${f.status}</span></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function renderizarHolerites() {
+    const tbody = document.getElementById('holerites-tbody');
+    tbody.innerHTML = '';
+
+    funcionarios
+        .filter(f => f.status === 'Ativo')
+        .forEach(f => {
+            const descontosObj = parseDescontos(f.descontos);
+            const totalDesc = Object.values(descontosObj).reduce((a, b) => a + b, 0);
+            const liquido = (Number(f.salario) || 0) - totalDesc;
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>#${f.id}</strong></td>
+                <td>${f.nome}</td>
+                <td>${formatarMoeda(f.salario)}</td>
+                <td>${formatarMoeda(totalDesc)}</td>
+                <td>${formatarMoeda(liquido)}</td>
+                <td class="text-end">
+                    <button type="button" class="btn btn-sm btn-outline-secondary me-1" onclick="gerarHolerite(${f.id})"><i class="fas fa-eye"></i> Ver</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary me-1" onclick="imprimirHoleriteDireto(${f.id})"><i class="fas fa-print"></i> Imprimir</button>
+                    <button type="button" class="btn btn-sm btn-outline-success" onclick="enviarHoleriteEmailDireto(${f.id})"><i class="fas fa-envelope"></i> Enviar</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+}
+
+function atualizarDashboard() {
+    const total   = funcionarios.length;
+    const ativos  = funcionarios.filter(f => f.status === 'Ativo').length;
+    const polly   = funcionarios.filter(f => f.operadora === 'Polly').length;
+    const d0      = funcionarios.filter(f => f.operadora === 'D0').length;
+    const imile   = funcionarios.filter(f => f.operadora === 'IMILE').length;
+
+    document.getElementById('total-func').textContent   = total;
+    document.getElementById('ativos-count').textContent = ativos;
+    document.getElementById('polly-count').textContent  = polly;
+    document.getElementById('d0-count').textContent     = d0;
+
+    // Últimos adicionados
+    const container = document.getElementById('recent-list');
+    container.innerHTML = '';
+    [...funcionarios]
+        .sort((a,b) => b.id - a.id)
+        .slice(0,5)
+        .forEach(f => {
+            const div = document.createElement('div');
+            div.className = 'px-4 py-3 border-bottom d-flex align-items-center';
+            div.innerHTML = `
+                <div class="flex-grow-1">
+                    <div class="fw-medium">${f.nome}</div>
+                    <small class="text-muted">${f.cargo || '?'} • ${f.operadora}</small>
+                </div>
+                <span class="badge ${f.status === 'Ativo' ? 'bg-success' : 'bg-secondary'}">${f.status}</span>
+            `;
+            container.appendChild(div);
+        });
+
+    // Gráfico
+    const ctx = document.getElementById('operadoraChart');
+    if (chartOperadora) chartOperadora.destroy();
+
+    chartOperadora = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['IMILE', 'Polly', 'D0'],
+            datasets: [{
+                data: [imile, polly, d0],
+                backgroundColor: ['#0d6efd', '#3b82f6', '#ef4444'],
+                borderWidth: 5,
+                borderColor: '#ffffff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { size: 14 }, padding: 20 } }
+            }
+        }
+    });
+}
+
+// ────────────────────────────────────────────────
+// Ações do formulário
+// ────────────────────────────────────────────────
+function openAddModal() {
+    document.getElementById('modal-title').textContent = 'Adicionar Novo Funcionário';
+    document.getElementById('form-funcionario').reset();
+    document.getElementById('edit-id').value = '';
+    modalFuncionario.show();
+}
+
+function abrirEditar(id) {
+    const f = funcionarios.find(x => x.id === id);
+    if (!f) return alert('Funcionário não encontrado');
+
+    document.getElementById('modal-title').textContent = 'Editar Funcionário';
+    document.getElementById('edit-id').value          = id;
+    document.getElementById('input-nome').value       = f.nome;
+    document.getElementById('input-email').value      = f.email;
+    document.getElementById('input-operadora').value  = f.operadora;
+    document.getElementById('input-cargo').value      = f.cargo || '';
+    document.getElementById('input-admissao').value   = f.admissao || '';
+    document.getElementById('input-status').value     = f.status;
+    document.getElementById('input-salario').value    = f.salario || '';
+    document.getElementById('input-descontos').value  = f.descontos || '';
+
+    modalFuncionario.show();
+}
+
+function salvarFuncionario() {
+    const nome     = document.getElementById('input-nome').value.trim();
+    const email    = document.getElementById('input-email').value.trim();
+    const operadora = document.getElementById('input-operadora').value;
+
+    if (!nome || !email || !operadora) {
+        alert('Nome, Email e Operadora são obrigatórios.');
+        return;
+    }
+
+    const data = {
+        nome,
+        email,
+        operadora,
+        cargo:     document.getElementById('input-cargo').value.trim(),
+        admissao:  document.getElementById('input-admissao').value || '',
+        status:    document.getElementById('input-status').value,
+        salario:   Number(document.getElementById('input-salario').value) || 0,
+        descontos: document.getElementById('input-descontos').value.trim()
+    };
+
+    const editId = Number(document.getElementById('edit-id').value);
+
+    if (editId) {
+        const idx = funcionarios.findIndex(f => f.id === editId);
+        if (idx === -1) return alert('Erro: registro não encontrado');
+        funcionarios[idx] = { ...funcionarios[idx], ...data };
+    } else {
+        const novoId = funcionarios.length ? Math.max(...funcionarios.map(f => f.id)) + 1 : 1;
+        funcionarios.push({ id: novoId, ...data });
+    }
+
+    salvarDados();
+    atualizarTudo();
+    modalFuncionario.hide();
+}
+
+function excluirFuncionario(id) {
+    if (!confirm('Excluir este funcionário permanentemente?')) return;
+    funcionarios = funcionarios.filter(f => f.id !== id);
+    salvarDados();
+    atualizarTudo();
+}
+
+// ────────────────────────────────────────────────
+// Holerite
+// ────────────────────────────────────────────────
+function gerarHolerite(id) {
+    const f = funcionarios.find(x => x.id === id);
+    if (!f) return;
+
+    currentFuncId = id;
+
+    const descObj = parseDescontos(f.descontos);
+    const totalDesc = Object.values(descObj).reduce((a,b)=>a+b, 0);
+    const liquido = (Number(f.salario)||0) - totalDesc;
+
+    document.getElementById('holerite-content').innerHTML = `
+        <div class="p-4">
+            <h4 class="text-center mb-4">Holerite – ${getMesAnoAtual()}</h4>
+            <div class="mb-4">
+                <strong>Nome:</strong> ${f.nome}<br>
+                <strong>Cargo:</strong> ${f.cargo || '—'}<br>
+                <strong>Operadora:</strong> ${f.operadora}<br>
+                <strong>Admissão:</strong> ${formatarData(f.admissao)}<br>
+            </div>
+            <table class="table table-bordered">
+                <thead class="table-light">
+                    <tr><th>Descrição</th><th class="text-end">Valor (R$)</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>Salário Base</td><td class="text-end">${formatarMoeda(f.salario)}</td></tr>
+                    ${Object.entries(descObj).map(([k,v]) => `
+                        <tr><td>${k} (desconto)</td><td class="text-end text-danger">-${formatarMoeda(v)}</td></tr>
+                    `).join('')}
+                    <tr class="table-active fw-bold">
+                        <td>Total Líquido</td>
+                        <td class="text-end">${formatarMoeda(liquido)}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    modalHolerite.show();
+}
+
+function imprimirHolerite() {
+    const conteudo = document.getElementById('holerite-content').innerHTML;
+    const win = window.open('', '_blank');
+    win.document.write(`
+        <html>
+        <head><title>Holerite</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+        </head>
+        <body onload="window.print();window.close()">${conteudo}</body>
+        </html>
+    `);
+    win.document.close();
+}
+
+function imprimirHoleriteDireto(id) {
+    gerarHolerite(id);
+    setTimeout(imprimirHolerite, 400);
+}
+
+function enviarHoleriteEmail() {
+    const f = funcionarios.find(x => x.id === currentFuncId);
+    if (!f?.email) return alert('Email não cadastrado');
+
+    const assunto = encodeURIComponent(`Holerite - ${getMesAnoAtual()}`);
+    const corpo   = encodeURIComponent(document.getElementById('holerite-content').innerText.trim());
+    window.location.href = `mailto:${f.email}?subject=${assunto}&body=${corpo}`;
+}
+
+function enviarHoleriteEmailDireto(id) {
+    gerarHolerite(id);
+    setTimeout(enviarHoleriteEmail, 400);
+}
+
+// ────────────────────────────────────────────────
+// Navegação e busca
+// ────────────────────────────────────────────────
+function showSection(secao) {
+    document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+    document.getElementById(secao).classList.add('active');
+
+    const titulos = {
+        dashboard:   'Dashboard',
+        funcionarios:'Funcionários',
+        relatorios:  'Relatórios',
+        holerites:   'Holerites'
+    };
+    document.getElementById('page-title').textContent = titulos[secao] || 'GestãoPro';
+
+    document.querySelectorAll('.sidebar .nav-link').forEach(el => el.classList.remove('active'));
+    document.getElementById(`nav-${secao}`).classList.add('active');
+
+    if (secao === 'funcionarios')   renderizarTabelaFuncionarios();
+    if (secao === 'relatorios')     renderizarRelatorio();
+    if (secao === 'dashboard')      atualizarDashboard();
+    if (secao === 'holerites')      renderizarHolerites();
+}
+
+function globalSearch() {
+    const termo = document.getElementById('global-search').value.toLowerCase().trim();
+    if (!termo) return renderizarTabelaFuncionarios();
+
+    const filtrado = funcionarios.filter(f =>
+        f.nome.toLowerCase().includes(termo) ||
+        (f.cargo||'').toLowerCase().includes(termo) ||
+        (f.email||'').toLowerCase().includes(termo)
+    );
+
+    renderizarTabelaFuncionarios(filtrado);
+}
+
+function clearSearch() {
+    document.getElementById('global-search').value = '';
+    renderizarTabelaFuncionarios();
+}
+
+function exportarCSV() {
+    let csv = 'ID;NOME;EMAIL;OPERADORA;CARGO;ADMISSAO;STATUS;SALARIO;DESCONTOS\n';
+    funcionarios.forEach(f => {
+        csv += `${f.id};"${f.nome.replace(/"/g,'""')}";"${f.email}";${f.operadora};"${(f.cargo||'').replace(/"/g,'""')}";${f.admissao || ''};${f.status};${f.salario || 0};"${(f.descontos||'').replace(/"/g,'""')}"\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `funcionarios_${new Date().toISOString().slice(0,10)}.csv`;
+    link.click();
+}
+
+function imprimirRelatorio() {
+    window.print();
+}
+
+function atualizarTudo() {
+    atualizarDashboard();
+    renderizarTabelaFuncionarios();
+    renderizarRelatorio();
+    renderizarHolerites();
+}
+
+// ────────────────────────────────────────────────
+// Inicialização
+// ────────────────────────────────────────────────
+function iniciarSistema() {
+    carregarDados();
+
+    modalFuncionario = new bootstrap.Modal(document.getElementById('modalFuncionario'));
+    modalHolerite    = new bootstrap.Modal(document.getElementById('modalHolerite'));
+
+    atualizarTudo();
+    showSection('dashboard');
+
+    console.log("%cGestãoPro carregado com sucesso ✓", "color:#0d6efd; font-weight:bold; font-size:14px;");
+}
+
+window.addEventListener('load', iniciarSistema);
+</script>
+</body>
+</html>
