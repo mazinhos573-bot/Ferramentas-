@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RDC Estoque – Controle Profissional</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #f8fafc; color: #111827; min-height: 100vh; }
+    .sidebar { background: white; border-right: 1px solid #e5e7eb; box-shadow: 1px 0 10px rgba(0,0,0,0.04); transition: transform 0.3s ease-in-out; }
+    .nav-active { background: #eff6ff; color: #1d4ed8; border-left: 4px solid #2563eb; font-weight: 600; }
+    .stock-critical { border-left: 4px solid #b91c1c; background: #fef2f2; }
+    .stock-low { border-left: 4px solid #d97706; background: #fffbeb; }
+    .fab { position: fixed; bottom: 24px; right: 24px; z-index: 50; }
+    @media (max-width: 1024px) { .sidebar { transform: translateX(-100%); } .sidebar.open { transform: translateX(0); } }
+    @media print { .no-print, .fab, header, .sidebar, #scanner-container { display: none !important; } body { background: white; margin: 0; padding: 0; } }
+    #scanner-container { border: 3px solid #2563eb; border-radius: 12px; overflow: hidden; max-width: 420px; margin: 0 auto; }
+    video { width: 100%; display: block; }
+  </style>
+</head>
+<body class="flex min-h-screen">
+
+<!-- SIDEBAR -->
+<aside id="sidebar" class="sidebar w-72 flex-shrink-0 fixed lg:relative h-screen overflow-y-auto z-40 lg:z-auto">
+  <div class="p-6 border-b">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">RDC</div>
+      <h1 class="text-xl font-semibold">Estoque</h1>
+    </div>
+  </div>
+  <nav class="p-4 space-y-1">
+    <button data-page="dashboard" class="nav-btn w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 nav-active">
+      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+      Dashboard
+    </button>
+    <button data-page="produtos" class="nav-btn w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 hover:bg-gray-50">
+      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+      Produtos
+    </button>
+    <button data-page="movimentacoes" class="nav-btn w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 hover:bg-gray-50">
+      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+      Movimentações
+    </button>
+    <button data-page="relatorios" class="nav-btn w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 hover:bg-gray-50">
+      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+      Relatórios
+    </button>
+    <button data-page="qrcodes" class="nav-btn w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 hover:bg-gray-50">
+      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+      QR Codes
+    </button>
+  </nav>
+  <div class="absolute bottom-6 left-6 right-6 text-xs text-gray-500">
+    © 2026 RDC Estoque<br>
+    Desenvolvido por <a href="mailto:ericlm.evo@gmail.com" class="text-blue-600 hover:underline">ERICLM.EVO</a>
+  </div>
+</aside>
+
+<!-- CONTEÚDO PRINCIPAL -->
+<div class="flex-1 flex flex-col">
+  <header class="bg-white border-b sticky top-0 z-30 no-print">
+    <div class="px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3 lg:hidden">
+        <button id="toggleSidebar" class="p-2 rounded-lg hover:bg-gray-100">
+          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <h1 class="text-lg font-semibold">RDC Estoque</h1>
+      </div>
+      <div class="flex items-center gap-4">
+        <span id="userGreeting" class="text-sm font-medium hidden sm:block"></span>
+        <button id="logoutBtn" class="text-sm text-red-600 hover:text-red-800 font-medium">Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 p-4 sm:p-6 lg:p-8 pb-32">
+    <!-- DASHBOARD -->
+    <section id="dashboard" class="page-section">
+      <h1 class="text-2xl font-bold mb-6">Dashboard</h1>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+        <div class="bg-white p-6 rounded-xl shadow-sm border"><p class="text-sm text-gray-500">Total Produtos</p><p id="totalProducts" class="text-3xl font-bold mt-1">0</p></div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border"><p class="text-sm text-gray-500">Estoque Crítico</p><p id="criticalStock" class="text-3xl font-bold mt-1 text-red-600">0</p></div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border"><p class="text-sm text-gray-500">Estoque Baixo (≤5)</p><p id="lowStock" class="text-3xl font-bold mt-1 text-amber-600">0</p></div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border"><p class="text-sm text-gray-500">Mov. Hoje</p><p id="todayMov" class="text-3xl font-bold mt-1">0</p></div>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white p-6 rounded-xl shadow-sm border"><h3 class="font-semibold mb-4">Entradas × Saídas (12 meses)</h3><canvas id="chartMov" height="160"></canvas></div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border"><h3 class="font-semibold mb-4">Produtos com Estoque Baixo</h3><div id="lowStockList" class="space-y-3 max-h-80 overflow-y-auto"></div></div>
+      </div>
+    </section>
+
+    <!-- PRODUTOS -->
+    <section id="produtos" class="page-section hidden">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h1 class="text-2xl font-bold">Produtos</h1>
+        <div class="flex flex-wrap gap-3">
+          <button id="openAddModal" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Novo Produto
+          </button>
+          <button id="openSaidaModal" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+            Registrar Saída
+          </button>
+          <button id="openScanner" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Escanear
+          </button>
+        </div>
+      </div>
+      <input type="search" id="productSearchInput" placeholder="Buscar produto..." class="w-full max-w-md border border-gray-300 rounded-lg px-4 py-2 mb-6 focus:ring-2 focus:ring-blue-500">
+      <div id="productListFull" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
+    </section>
+
+    <!-- MOVIMENTAÇÕES -->
+    <section id="movimentacoes" class="page-section hidden">
+      <h1 class="text-2xl font-bold mb-6">Movimentações</h1>
+      <div class="flex flex-wrap gap-3 mb-6">
+        <select id="filterTipo" class="border rounded-lg px-3 py-2 text-sm"><option value="">Todas</option><option value="entrada">Entradas</option><option value="saida">Saídas</option></select>
+        <input type="date" id="filterDataInicio" class="border rounded-lg px-3 py-2 text-sm">
+        <input type="date" id="filterDataFim" class="border rounded-lg px-3 py-2 text-sm">
+        <button id="applyFilter" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">Filtrar</button>
+        <button id="clearFilter" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm">Limpar</button>
+      </div>
+      <input type="search" id="movimentacaoSearchInput" placeholder="Buscar por produto ou responsável..." class="w-full max-w-md border border-gray-300 rounded-lg px-4 py-2 mb-6">
+      <div id="movimentacoesList" class="space-y-3"></div>
+    </section>
+
+    <!-- RELATÓRIOS -->
+    <section id="relatorios" class="page-section hidden">
+      <h1 class="text-2xl font-bold mb-6">Relatórios</h1>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <button id="gerarMovPDF" class="bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-xl font-medium hover:shadow-lg">Movimentações (PDF)</button>
+        <button id="gerarEstoquePDF" class="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 rounded-xl font-medium hover:shadow-lg">Estoque Atual (PDF)</button>
+      </div>
+    </section>
+
+    <!-- QR CODES -->
+    <section id="qrcodes" class="page-section hidden">
+      <h1 class="text-2xl font-bold mb-6">QR Codes</h1>
+      <button id="generateQRCodes" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg mb-8">Imprimir todos os QR Codes</button>
+      <div id="qrCodeList" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"></div>
+    </section>
+  </main>
+
+  <button id="fabAdd" class="fab bg-blue-600 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-xl hover:bg-blue-700">
+    <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+  </button>
+</div>
+
+<!-- ====================== MODAIS ====================== -->
+<!-- Novo/Editar Produto -->
+<div id="productModal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center hidden z-50">
+  <div class="bg-white rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+    <div class="flex justify-between items-center mb-4">
+      <h3 id="modalTitle" class="text-xl font-bold">Novo Produto</h3>
+      <button id="closeProductModal" class="text-gray-500 hover:text-gray-800 text-2xl">×</button>
+    </div>
+    <form id="productForm">
+      <input type="hidden" id="editId">
+      <div class="space-y-4">
+        <div><label class="block text-sm font-medium mb-1">Nome do produto *</label><input type="text" id="nome" required class="w-full border rounded-lg px-3 py-2"></div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Código / Código de barras</label>
+          <div class="flex gap-2">
+            <input type="text" id="cod" class="flex-1 border rounded-lg px-3 py-2">
+            <button type="button" id="scanBarcodeNewProduct" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm">Escanear</button>
+          </div>
+        </div>
+        <div><label class="block text-sm font-medium mb-1">Quantidade inicial</label><input type="number" id="quantidade" min="0" value="0" class="w-full border rounded-lg px-3 py-2"></div>
+        <div><label class="block text-sm font-medium mb-1">URL da imagem (opcional)</label><input type="url" id="imagem" placeholder="https://..." class="w-full border rounded-lg px-3 py-2"></div>
+        <div class="pt-4 border-t flex justify-end gap-3">
+          <button type="button" id="closeProductModal2" class="px-4 py-2 border rounded-lg">Cancelar</button>
+          <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-lg">Salvar</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Registrar Saída -->
+<div id="saidaModal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center hidden z-50">
+  <div class="bg-white rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-xl font-bold">Registrar Saída</h3>
+      <button id="closeSaidaModal" class="text-gray-500 hover:text-gray-800 text-2xl">×</button>
+    </div>
+    <form id="saidaForm">
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium mb-1">Produto (digite código ou nome)</label>
+          <div class="flex gap-2">
+            <input type="text" id="saidaProdutoInput" placeholder="Código ou nome..." class="flex-1 border rounded-lg px-3 py-2">
+            <button type="button" id="scanSaida" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm">Escanear</button>
+          </div>
+          <select id="saidaProduto" required class="w-full border rounded-lg px-3 py-2 mt-2 hidden"></select>
+        </div>
+        <div><label class="block text-sm font-medium mb-1">Quantidade a retirar</label><input type="number" id="saidaQuantidade" min="1" required class="w-full border rounded-lg px-3 py-2"></div>
+        <div><label class="block text-sm font-medium mb-1">Responsável</label><input type="text" id="saidaResponsavel" readonly class="w-full border rounded-lg px-3 py-2 bg-gray-100"></div>
+        <div><label class="block text-sm font-medium mb-1">Observação (opcional)</label><textarea id="saidaObs" rows="2" class="w-full border rounded-lg px-3 py-2"></textarea></div>
+        <div class="pt-4 border-t flex justify-end gap-3">
+          <button type="button" id="closeSaidaModal2" class="px-4 py-2 border rounded-lg">Cancelar</button>
+          <button type="submit" class="bg-red-600 text-white px-6 py-2 rounded-lg">Confirmar Saída</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Scanner -->
+<div id="scannerModal" class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center hidden z-50">
+  <div class="bg-white rounded-xl p-6 w-full max-w-xl relative">
+    <button id="closeScanner" class="absolute top-4 right-4 text-3xl">×</button>
+    <h3 id="scannerTitle" class="text-xl font-bold mb-4 text-center">Escanear código de barras</h3>
+    <div id="scanner-container"><div id="interactive" class="viewport"></div></div>
+    <p class="text-center mt-4 text-sm text-gray-600">Posicione o código dentro do retângulo</p>
+    <p id="scannerResult" class="text-center mt-3 font-medium text-lg text-blue-700"></p>
+  </div>
+</div>
+
+<script type="module">
+import ACCESS_CONFIG from './info.js';
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
+import { getDatabase, ref, push, update, remove, onValue, get, child } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDTr6hR8jwGONeDRXa_8vPShBkw0mJVceM",
+  authDomain: "contole-de-estoque-cdc.firebaseapp.com",
+  databaseURL: "https://contole-de-estoque-cdc-default-rtdb.firebaseio.com",
+  projectId: "contole-de-estoque-cdc",
+  storageBucket: "contole-de-estoque-cdc.firebasestorage.app",
+  messagingSenderId: "11141306715",
+  appId: "1:11141306715:web:c3294ca3c337f5a01ea27e",
+  measurementId: "G-WR3NG9LX8C"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const produtosRef = ref(db, 'produtos');
+const movRef = ref(db, 'movimentacoes');
+
+let currentUser = null;
+let allProducts = {};
+let allMovements = [];
+let chartInstance = null;
+let scannerRunning = false;
+let scannerPurpose = null; // 'newProduct' | 'saida' | 'general'
+
+// ====================== AUTENTICAÇÃO ======================
+function checkLogin() {
+  const session = localStorage.getItem('cdcSession');
+  if (!session) {
+    const username = prompt("Usuário:");
+    const password = prompt("Senha:");
+    const user = ACCESS_CONFIG.users.find(u => u.username === username && u.password === password);
+    if (!user) { alert(ACCESS_CONFIG.loginErrorMessage); checkLogin(); return; }
+    currentUser = user;
+    localStorage.setItem('cdcSession', JSON.stringify({ username: user.username, role: user.role, timestamp: Date.now() }));
+  } else {
+    const data = JSON.parse(session);
+    if (Date.now() - data.timestamp > ACCESS_CONFIG.sessionTimeout) {
+      localStorage.removeItem('cdcSession');
+      location.reload();
+      return;
+    }
+    currentUser = ACCESS_CONFIG.users.find(u => u.username === data.username);
+  }
+  document.getElementById('userGreeting').textContent = `Olá, ${currentUser.username}`;
+  document.getElementById('saidaResponsavel').value = currentUser.username;
+}
+checkLogin();
+
+// ====================== NAVEGAÇÃO ======================
+document.querySelectorAll('.nav-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.page-section').forEach(s => s.classList.add('hidden'));
+    document.getElementById(btn.dataset.page).classList.remove('hidden');
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('nav-active'));
+    btn.classList.add('nav-active');
+    if (btn.dataset.page === 'dashboard') loadDashboard();
+    if (btn.dataset.page === 'qrcodes') loadQRCodes();
+    if (btn.dataset.page === 'movimentacoes') renderMovements(allMovements);
+    document.getElementById('sidebar').classList.remove('open');
+  });
+});
+
+document.getElementById('toggleSidebar').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+});
+
+// ====================== FIREBASE LISTENERS ======================
+onValue(produtosRef, snap => {
+  allProducts = snap.val() || {};
+  renderProdutos();
+  updateDashboardCards();
+  fillSaidaSelect();
+});
+
+onValue(movRef, snap => {
+  allMovements = Object.entries(snap.val() || {}).map(([k,v]) => ({id: k, ...v})).sort((a,b) => new Date(b.data) - new Date(a.data));
+  if (!document.getElementById('movimentacoes').classList.contains('hidden')) renderMovements(allMovements);
+  updateDashboardCards();
+});
+
+// ====================== FUNÇÕES ======================
+function renderProdutos() {
+  const container = document.getElementById('productListFull');
+  container.innerHTML = '';
+  const term = (document.getElementById('productSearchInput').value || '').toLowerCase().trim();
+  Object.entries(allProducts).forEach(([id, p]) => {
+    if (term && !p.nome?.toLowerCase().includes(term) && !p.cod?.includes(term)) return;
+    const card = document.createElement('div');
+    card.className = `bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition ${p.quantidade === 0 ? 'stock-critical' : p.quantidade <= 5 ? 'stock-low' : ''}`;
+    card.innerHTML = `
+      <img src="${p.imagem || 'https://via.placeholder.com/150?text=Sem+foto'}" alt="${p.nome}" class="w-full h-40 object-cover rounded-lg mb-3">
+      <h3 class="font-semibold text-lg">${p.nome || 'Sem nome'}</h3>
+      <p class="text-sm text-gray-500">COD: ${p.cod || '-'}</p>
+      <p class="text-2xl font-bold mt-2 ${p.quantidade === 0 ? 'text-red-600' : p.quantidade <= 5 ? 'text-amber-600' : 'text-green-600'}">${p.quantidade ?? 0} un</p>
+      <div class="mt-4 flex gap-3">
+        <button class="text-blue-600 hover:underline text-sm edit-btn" data-id="${id}">Editar</button>
+        <button class="text-red-600 hover:underline text-sm saida-btn" data-id="${id}">Saída</button>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function updateDashboardCards() {
+  const products = Object.values(allProducts);
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('totalProducts').textContent = products.length;
+  document.getElementById('criticalStock').textContent = products.filter(p => (p.quantidade||0) === 0).length;
+  document.getElementById('lowStock').textContent = products.filter(p => (p.quantidade||0) > 0 && (p.quantidade||0) <= 5).length;
+  document.getElementById('todayMov').textContent = allMovements.filter(m => m.data.startsWith(today)).length;
+
+  const lowList = document.getElementById('lowStockList');
+  lowList.innerHTML = '';
+  products.filter(p => (p.quantidade||0) <= 5).sort((a,b) => a.quantidade - b.quantidade).forEach(p => {
+    const div = document.createElement('div');
+    div.className = `p-3 rounded-lg text-sm ${p.quantidade === 0 ? 'stock-critical' : 'stock-low'}`;
+    div.innerHTML = `<strong>${p.nome}</strong> — ${p.quantidade || 0} un`;
+    lowList.appendChild(div);
+  });
+}
+
+function loadDashboard() {
+  const meses = Array(12).fill(0).map(() => ({entrada:0, saida:0}));
+  allMovements.forEach(m => {
+    const mes = new Date(m.data).getMonth();
+    if (m.tipo === 'entrada') meses[mes].entrada += Number(m.quantidade||0);
+    else if (m.tipo === 'saida') meses[mes].saida += Number(m.quantidade||0);
+  });
+  const ctx = document.getElementById('chartMov').getContext('2d');
+  if (chartInstance) chartInstance.destroy();
+  chartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'],
+      datasets: [
+        { label: 'Entradas', data: meses.map(m => m.entrada), backgroundColor: '#10b981' },
+        { label: 'Saídas', data: meses.map(m => m.saida), backgroundColor: '#ef4444' }
+      ]
+    },
+    options: { responsive: true, scales: { y: { beginAtZero: true } } }
+  });
+}
+
+function renderMovements(data = allMovements) {
+  const container = document.getElementById('movimentacoesList');
+  container.innerHTML = '';
+  const tipoFilter = document.getElementById('filterTipo').value;
+  const inicio = document.getElementById('filterDataInicio').value;
+  const fim = document.getElementById('filterDataFim').value;
+  const search = (document.getElementById('movimentacaoSearchInput').value || '').toLowerCase();
+
+  let filtered = data;
+  if (tipoFilter) filtered = filtered.filter(m => m.tipo === tipoFilter);
+  if (inicio) filtered = filtered.filter(m => m.data >= inicio);
+  if (fim) filtered = filtered.filter(m => m.data <= fim + 'T23:59:59');
+  if (search) filtered = filtered.filter(m => 
+    m.nome?.toLowerCase().includes(search) || 
+    m.responsavel?.toLowerCase().includes(search) ||
+    m.cod?.includes(search)
+  );
+
+  filtered.forEach(m => {
+    const div = document.createElement('div');
+    div.className = `p-4 rounded-lg border ${m.tipo === 'entrada' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`;
+    div.innerHTML = `
+      <div class="flex justify-between items-start">
+        <div><span class="font-medium">${m.nome}</span> <span class="text-xs text-gray-500">(${m.cod || '-'})</span></div>
+        <span class="${m.tipo === 'entrada' ? 'text-green-700' : 'text-red-700'} font-bold text-lg">${m.tipo === 'entrada' ? '+' : '-'}${m.quantidade}</span>
+      </div>
+      <div class="text-sm text-gray-600 mt-1">${new Date(m.data).toLocaleString('pt-BR')} • <strong>${m.responsavel}</strong></div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function fillSaidaSelect() {
+  const select = document.getElementById('saidaProduto');
+  select.innerHTML = '<option value="">Selecione o produto...</option>';
+  Object.entries(allProducts)
+    .filter(([_,p]) => (p.quantidade||0) > 0)
+    .sort((a,b) => a[1].nome.localeCompare(b[1].nome))
+    .forEach(([id, p]) => {
+      const opt = document.createElement('option');
+      opt.value = id;
+      opt.textContent = `${p.nome} (${p.quantidade} un) - ${p.cod || '-'}`;
+      select.appendChild(opt);
+    });
+}
+
+function loadQRCodes() {
+  const container = document.getElementById('qrCodeList');
+  container.innerHTML = '';
+  Object.entries(allProducts).forEach(([id, p]) => {
+    if (!p.cod) return;
+    const div = document.createElement('div');
+    div.className = "bg-white border rounded-xl p-4 shadow-sm text-center";
+    div.innerHTML = `<div id="qrcode-${id}" class="mx-auto mb-3"></div><p class="font-medium text-sm">${p.nome}</p><p class="text-xs text-gray-500">${p.cod}</p>`;
+    container.appendChild(div);
+    new QRCode(document.getElementById(`qrcode-${id}`), { text: p.cod, width: 140, height: 140 });
+  });
+}
+
+// ====================== SCANNER ======================
+function startScanner(purpose) {
+  scannerPurpose = purpose;
+  document.getElementById('scannerTitle').textContent = purpose === 'newProduct' ? "Escanear código do novo produto" : "Escanear produto para saída";
+
+  Quagga.init({
+    inputStream: { name: "Live", type: "LiveStream", target: document.querySelector('#interactive'), constraints: { width: {ideal:640}, height:{ideal:480}, facingMode:"environment" }},
+    locator: { patchSize: "medium", halfSample: true },
+    numOfWorkers: navigator.hardwareConcurrency || 4,
+    decoder: { readers: ["ean_reader", "ean_8_reader", "code_128_reader", "code_39_reader", "upc_reader"] },
+    locate: true
+  }, err => {
+    if (err) { alert("Erro ao iniciar câmera"); return; }
+    Quagga.start();
+    scannerRunning = true;
+  });
+
+  Quagga.onDetected(data => {
+    const code = data.codeResult.code;
+    document.getElementById('scannerResult').textContent = `Código: ${code}`;
+    setTimeout(() => {
+      stopScanner();
+      document.getElementById('scannerModal').classList.add('hidden');
+      if (scannerPurpose === 'newProduct') {
+        document.getElementById('cod').value = code;
+      } else if (scannerPurpose === 'saida') {
+        const found = Object.entries(allProducts).find(([_,p]) => p.cod === code);
+        if (found) {
+          document.getElementById('saidaProduto').value = found[0];
+          document.getElementById('saidaProdutoInput').value = code;
+        } else {
+          alert(`Produto com código ${code} não encontrado.`);
+        }
+      }
+    }, 800);
+  });
+}
+
+function stopScanner() {
+  if (scannerRunning) { Quagga.stop(); scannerRunning = false; }
+}
+
+// ====================== EVENTOS ======================
+document.getElementById('productSearchInput').addEventListener('input', renderProdutos);
+document.getElementById('movimentacaoSearchInput').addEventListener('input', () => renderMovements());
+document.getElementById('applyFilter').addEventListener('click', () => renderMovements());
+document.getElementById('clearFilter').addEventListener('click', () => {
+  document.getElementById('filterTipo').value = '';
+  document.getElementById('filterDataInicio').value = '';
+  document.getElementById('filterDataFim').value = '';
+  document.getElementById('movimentacaoSearchInput').value = '';
+  renderMovements();
+});
+
+document.getElementById('openAddModal').addEventListener('click', () => openProductModal());
+document.getElementById('fabAdd').addEventListener('click', () => { document.querySelector('[data-page="produtos"]').click(); openProductModal(); });
+
+function openProductModal(id = null) {
+  document.getElementById('productModal').classList.remove('hidden');
+  document.getElementById('modalTitle').textContent = id ? "Editar Produto" : "Novo Produto";
+  document.getElementById('editId').value = id || '';
+  if (id && allProducts[id]) {
+    const p = allProducts[id];
+    document.getElementById('nome').value = p.nome || '';
+    document.getElementById('cod').value = p.cod || '';
+    document.getElementById('quantidade').value = p.quantidade ?? 0;
+    document.getElementById('imagem').value = p.imagem || '';
+  } else {
+    document.getElementById('productForm').reset();
+  }
+}
+
+document.querySelectorAll('#closeProductModal, #closeProductModal2').forEach(el => el.addEventListener('click', () => document.getElementById('productModal').classList.add('hidden')));
+
+document.getElementById('productForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const id = document.getElementById('editId').value;
+  const data = {
+    nome: document.getElementById('nome').value.trim(),
+    cod: document.getElementById('cod').value.trim(),
+    quantidade: Number(document.getElementById('quantidade').value) || 0,
+    imagem: document.getElementById('imagem').value.trim() || null,
+    ultimaAtualizacao: new Date().toISOString()
+  };
+  if (!data.nome) return alert("Nome obrigatório");
+  if (id) update(ref(db, 'produtos/' + id), data);
+  else {
+    const newRef = push(produtosRef);
+    update(newRef, data);
+    if (data.quantidade > 0) push(movRef, { tipo:'entrada', produtoId:newRef.key, nome:data.nome, cod:data.cod, quantidade:data.quantidade, responsavel: currentUser.username + " (cadastro)", data: new Date().toISOString() });
+  }
+  document.getElementById('productModal').classList.add('hidden');
+});
+
+document.getElementById('scanBarcodeNewProduct').addEventListener('click', () => {
+  document.getElementById('scannerModal').classList.remove('hidden');
+  startScanner('newProduct');
+});
+
+document.getElementById('scanSaida').addEventListener('click', () => {
+  document.getElementById('scannerModal').classList.remove('hidden');
+  startScanner('saida');
+});
+
+document.getElementById('openScanner').addEventListener('click', () => {
+  document.getElementById('scannerModal').classList.remove('hidden');
+  startScanner('general');
+});
+
+document.getElementById('closeScanner').addEventListener('click', () => { stopScanner(); document.getElementById('scannerModal').classList.add('hidden'); });
+
+document.getElementById('openSaidaModal').addEventListener('click', () => {
+  document.getElementById('saidaProdutoInput').value = '';
+  document.getElementById('saidaProduto').value = '';
+  document.getElementById('saidaQuantidade').value = 1;
+  document.getElementById('saidaResponsavel').value = currentUser.username;
+  document.getElementById('saidaObs').value = '';
+  document.getElementById('saidaModal').classList.remove('hidden');
+});
+
+document.querySelectorAll('#closeSaidaModal, #closeSaidaModal2').forEach(el => el.addEventListener('click', () => document.getElementById('saidaModal').classList.add('hidden')));
+
+document.getElementById('saidaProdutoInput').addEventListener('input', function() {
+  const term = this.value.trim().toLowerCase();
+  const select = document.getElementById('saidaProduto');
+  select.innerHTML = '';
+  let found = false;
+  Object.entries(allProducts).forEach(([id, p]) => {
+    if ((p.cod && p.cod.includes(term)) || p.nome.toLowerCase().includes(term)) {
+      const opt = document.createElement('option');
+      opt.value = id;
+      opt.textContent = `${p.nome} (${p.quantidade} un) - ${p.cod || '-'}`;
+      select.appendChild(opt);
+      found = true;
+    }
+  });
+  select.classList.toggle('hidden', !found);
+});
+
+document.getElementById('saidaForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const produtoId = document.getElementById('saidaProduto').value;
+  const qtd = Number(document.getElementById('saidaQuantidade').value);
+  const resp = document.getElementById('saidaResponsavel').value;
+  const obs = document.getElementById('saidaObs').value.trim();
+  if (!produtoId) return alert("Selecione um produto");
+  const prod = allProducts[produtoId];
+  const novo = (prod.quantidade || 0) - qtd;
+  if (novo < 0 && !confirm(`Estoque ficará negativo (${novo}). Confirmar?`)) return;
+  update(ref(db, 'produtos/' + produtoId), { quantidade: novo });
+  push(movRef, { tipo:'saida', produtoId, nome:prod.nome, cod:prod.cod, quantidade:qtd, responsavel:resp, data:new Date().toISOString(), observacao:obs||null });
+  document.getElementById('saidaModal').classList.add('hidden');
+  alert("Saída registrada!");
+});
+
+document.addEventListener('click', e => {
+  if (e.target.classList.contains('edit-btn')) openProductModal(e.target.dataset.id);
+  if (e.target.classList.contains('saida-btn')) {
+    document.getElementById('saidaProduto').value = e.target.dataset.id;
+    document.getElementById('saidaModal').classList.remove('hidden');
+  }
+});
+
+document.getElementById('generateQRCodes').addEventListener('click', () => window.print());
+
+document.getElementById('gerarEstoquePDF').addEventListener('click', () => {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.setFontSize(18); doc.text("Relatório de Estoque Atual", 20, 20);
+  let y = 40;
+  Object.values(allProducts).sort((a,b)=>a.nome.localeCompare(b.nome)).forEach(p => {
+    if (y > 270) { doc.addPage(); y = 20; }
+    doc.text(`${p.nome.substring(0,40).padEnd(45)}${(p.cod||'-').padEnd(20)}${p.quantidade||0}`, 20, y);
+    y += 8;
+  });
+  doc.save("estoque-atual.pdf");
+});
+
+document.getElementById('gerarMovPDF').addEventListener('click', () => {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.setFontSize(18); doc.text("Relatório de Movimentações", 20, 20);
+  let y = 40;
+  allMovements.slice(0,300).forEach(m => {
+    if (y > 270) { doc.addPage(); y = 20; }
+    doc.text(`${new Date(m.data).toLocaleString('pt-BR')} ${m.tipo.toUpperCase()} ${m.tipo==='entrada'?'+' : '-'} ${m.quantidade} ${m.nome}`, 20, y);
+    y += 8;
+  });
+  doc.save("movimentacoes.pdf");
+});
+
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  localStorage.removeItem('cdcSession');
+  location.reload();
+});
+
+// ====================== INICIALIZAÇÃO ======================
+document.querySelector('[data-page="dashboard"]').click();
+</script>
+</body>
+</html>
