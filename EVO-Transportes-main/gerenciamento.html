@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Gerenciamento | EVO</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-50 font-[Inter] h-screen flex overflow-hidden">
+
+  <div class="flex-1 flex flex-col min-w-0 overflow-y-auto">
+    <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
+      <div class="px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+          <div class="bg-indigo-600 p-2 rounded-lg">
+            <i class="fa-solid fa-chart-line text-white"></i>
+          </div>
+          <h1 class="text-xl font-bold text-slate-800">Painel de Gerenciamento</h1>
+        </div>
+        <div class="flex gap-4 items-center">
+          <!-- Alterar Foto -->
+          <div class="flex items-center gap-2 mr-4 border-r pr-4 border-gray-200">
+            <label for="input-avatar" class="cursor-pointer group relative">
+              <img id="user-avatar-img" src="" class="w-8 h-8 rounded-full object-cover border border-indigo-200 group-hover:opacity-75">
+              <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <i class="fa-solid fa-camera text-[10px] text-white"></i>
+              </div>
+            </label>
+            <input type="file" id="input-avatar" class="hidden" accept="image/*">
+            <span class="text-xs font-medium text-slate-600" id="user-display-name"></span>
+          </div>
+
+          <button id="btn-report" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm flex items-center">
+            <i class="fa-brands fa-whatsapp mr-2"></i> Relatório
+          </button>
+          <button id="btn-logout" class="text-gray-500 hover:text-red-600 transition-colors"><i class="fa-solid fa-right-from-bracket mr-2"></i>Sair</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="p-6 space-y-6">
+      <!-- Stats -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex items-center">
+          <div class="p-3 bg-indigo-100 text-indigo-600 rounded-lg text-xl mr-4"><i class="fa-solid fa-truck"></i></div>
+          <div><p class="text-sm text-gray-500">Total</p><h4 id="stat-total" class="text-2xl font-bold">0</h4></div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex items-center">
+          <div class="p-3 bg-yellow-100 text-yellow-600 rounded-lg text-xl mr-4"><i class="fa-solid fa-clock"></i></div>
+          <div><p class="text-sm text-gray-500">Aguardando</p><h4 id="stat-aguardando" class="text-2xl font-bold">0</h4></div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex items-center">
+          <div class="p-3 bg-purple-100 text-purple-600 rounded-lg text-xl mr-4"><i class="fa-solid fa-spinner"></i></div>
+          <div><p class="text-sm text-gray-500">Andamento</p><h4 id="stat-andamento" class="text-2xl font-bold">0</h4></div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex items-center">
+          <div class="p-3 bg-green-100 text-green-600 rounded-lg text-xl mr-4"><i class="fa-solid fa-check"></i></div>
+          <div><p class="text-sm text-gray-500">Finalizado</p><h4 id="stat-finalizado" class="text-2xl font-bold">0</h4></div>
+        </div>
+      </div>
+
+      <!-- Seção Google Sheets -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-6">
+        <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2"><i class="fa-solid fa-table mr-2"></i>Dados Importados (Google Sheets)</h2>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50 text-xs text-gray-500 uppercase">
+              <tr>
+                <th class="px-4 py-3 text-left">Nome</th>
+                <th class="px-4 py-3 text-left">Transportadora</th>
+                <th class="px-4 py-3 text-left">Placa do Carro</th>
+                <th class="px-4 py-3 text-left">Foto</th>
+              </tr>
+            </thead>
+            <tbody id="tabela-google-sheets" class="divide-y divide-gray-200">
+              <tr><td colspan="4" class="px-4 py-6 text-center text-gray-500 text-sm">Carregando dados do Google Sheets...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+        <!-- Tabela Fluxo de Descarga -->
+        <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Fluxo de Descarga</h2>
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50 text-xs text-gray-500 uppercase">
+                <tr>
+                  <th class="px-4 py-3 text-left">Motorista</th>
+                  <th class="px-4 py-3 text-left">Placas</th>
+                  <th class="px-4 py-3 text-left">Status</th>
+                </tr>
+              </thead>
+              <tbody id="tabela-gerenciamento" class="divide-y divide-gray-200 cursor-pointer"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="space-y-6">
+          <!-- Gestão Usuários -->
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Criar Usuário</h2>
+            <form id="user-form" class="space-y-3">
+              <input type="text" id="new_user" placeholder="Login" class="w-full rounded-lg border-gray-300 border p-2 text-sm" required>
+              <input type="password" id="new_pass" placeholder="Senha" class="w-full rounded-lg border-gray-300 border p-2 text-sm" required>
+              <input type="text" id="new_colaborador" placeholder="Nome do Colaborador" class="w-full rounded-lg border-gray-300 border p-2 text-sm" required>
+              <label class="block text-xs text-gray-600">Foto (opcional)</label>
+              <input type="file" id="new_foto_upload" accept="image/*" class="w-full rounded-lg border-gray-300 border p-2 text-sm">
+              <select id="new_role" class="w-full rounded-lg border-gray-300 border p-2 text-sm">
+                <option value="motorista">Motorista</option>
+                <option value="portaria">Portaria</option>
+                <option value="admin">Admin</option>
+                <option value="visualizacao">Visualização</option>
+              </select>
+              <select id="new_transportadora" class="w-full rounded-lg border-gray-300 border p-2 text-sm hidden">
+                <option value="">Selecionar Transportadora...</option>
+                <option value="2 log">2 log</option>
+                <option value="3 log">3 log</option>
+                <option value="4 log">4 log</option>
+              </select>
+              <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-lg text-sm font-bold">Cadastrar</button>
+            </form>
+          </div>
+
+          <!-- Painel EricLM -->
+          <div id="admin-eric-panel" class="hidden bg-slate-800 rounded-xl shadow-sm border border-gray-700 p-6 text-white">
+            <h2 class="text-lg font-bold mb-4 border-b border-slate-700 pb-2"><i class="fa-solid fa-crown text-yellow-400 mr-2"></i>Controle Admin</h2>
+            <div class="space-y-4">
+              <button onclick="window.limparChat('global')" class="w-full bg-red-600 hover:bg-red-700 text-xs py-2 rounded">Limpar Chat Global</button>
+              <button onclick="window.limparChat('motorista')" class="w-full bg-red-600 hover:bg-red-700 text-xs py-2 rounded">Limpar Chat Motorista</button>
+              <button onclick="window.limparChat('admin')" class="w-full bg-red-600 hover:bg-red-700 text-xs py-2 rounded">Limpar Chat Admin</button>
+              <div class="pt-2 border-t border-slate-700">
+                <p class="text-[10px] uppercase text-slate-400 mb-2">Banir Usuário</p>
+                <div class="flex gap-2">
+                  <input type="text" id="ban_user" placeholder="Login..." class="flex-1 bg-slate-900 border-none rounded p-1.5 text-xs">
+                  <button onclick="window.toggleBan(true)" class="bg-orange-600 p-2 rounded text-xs">Banir</button>
+                  <button onclick="window.toggleBan(false)" class="bg-green-600 p-2 rounded text-xs">OK</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal Detalhes -->
+  <div id="modal-details" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl">
+      <div id="modal-content"></div>
+      <div class="p-4 bg-gray-50 flex justify-end">
+        <button onclick="document.getElementById('modal-details').classList.add('hidden')" class="px-6 py-2 bg-gray-200 rounded-lg font-bold">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <aside id="chat-container" class="w-96 flex-shrink-0 hidden md:block z-20"></aside>
+
+  <script type="module">
+    import { checkAuth, logout } from './auth.js';
+    import { initChat } from './chat.js';
+    import { db, ref, set, onValue, update, remove } from './bd.js';
+
+    const user = checkAuth('admin');
+    if (user.username === 'EricLM') document.getElementById('admin-eric-panel').classList.remove('hidden');
+    
+    document.getElementById('btn-logout').addEventListener('click', logout);
+    document.getElementById('user-display-name').textContent = user.username;
+    document.getElementById('user-avatar-img').src = user.avatar;
+
+    initChat(user, 'chat-container', 'admin');
+
+    // Função de Redimensionamento Global
+    const resizeImg = (file) => {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 200;
+            const scaleSize = MAX_WIDTH / img.width;
+            canvas.width = MAX_WIDTH;
+            canvas.height = img.height * scaleSize;
+            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL('image/jpeg', 0.7));
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    };
+
+    // Alterar foto do perfil
+    document.getElementById('input-avatar').addEventListener('change', async (e) => {
+      if (e.target.files[0]) {
+        const base64 = await resizeImg(e.target.files[0]);
+        await update(ref(db, `users/${user.username}`), { avatar: base64 });
+        user.avatar = base64;
+        localStorage.setItem('evo_user', JSON.stringify(user));
+        location.reload();
+      }
+    });
+
+    const table = document.getElementById('tabela-gerenciamento');
+    const statusMap = {
+      'aguardando_descarga': { label: 'Aguard. Carregamento', color: 'bg-yellow-100 text-yellow-800', next: 'descarga_em_andamento', btnLabel: 'Iniciar', btnColor: 'bg-purple-600' },
+      'descarga_em_andamento': { label: 'Em Andamento', color: 'bg-purple-100 text-purple-800', next: 'descarga_finalizada', btnLabel: 'Finalizar', btnColor: 'bg-blue-600' },
+      'descarga_finalizada': { label: 'Finalizada', color: 'bg-blue-100 text-blue-800', next: 'liberado', btnLabel: 'Liberar', btnColor: 'bg-green-600' },
+      'liberado': { label: 'Liberado', color: 'bg-green-100 text-green-800', next: null }
+    };
+
+    let cacheTransportes = {};
+    let stats = { total: 0, aguardando: 0, andamento: 0, finalizado: 0 };
+
+    onValue(ref(db, 'transportes'), (snapshot) => {
+      table.innerHTML = '';
+      stats = { total: 0, aguardando: 0, andamento: 0, finalizado: 0 };
+      const data = snapshot.val();
+      if (!data) return;
+      cacheTransportes = data;
+
+      Object.entries(data).forEach(([id, t]) => {
+        stats.total++;
+        if (t.status === 'aguardando_descarga') stats.aguardando++;
+        if (t.status === 'descarga_em_andamento') stats.andamento++;
+        if (t.status === 'descarga_finalizada' || t.status === 'liberado') stats.finalizado++;
+
+        if (statusMap[t.status]) {
+          const config = statusMap[t.status];
+          const tr = document.createElement('tr');
+          tr.className = "hover:bg-slate-50 transition";
+          tr.innerHTML = `
+            <td class="px-4 py-3 text-sm font-medium" onclick="window.verDetalhes('${id}')">${t.motorista}</td>
+            <td class="px-4 py-3 text-xs text-gray-500" onclick="window.verDetalhes('${id}')">${t.placa_carro} / ${t.transportadora}</td>
+            <td class="px-4 py-3"><span class="${config.color} px-2 py-0.5 rounded text-[10px] font-bold">${config.label}</span></td>
+          `;
+          table.appendChild(tr);
+        }
+      });
+      document.getElementById('stat-total').textContent = stats.total;
+      document.getElementById('stat-aguardando').textContent = stats.aguardando;
+      document.getElementById('stat-andamento').textContent = stats.andamento;
+      document.getElementById('stat-finalizado').textContent = stats.finalizado;
+    });
+
+    window.verDetalhes = (id) => {
+      const t = cacheTransportes[id];
+      const modal = document.getElementById('modal-details');
+      const content = document.getElementById('modal-content');
+      
+      let geoHtml = t.lat ? `<a href="https://www.google.com/maps?q=${t.lat},${t.lng}" target="_blank" class="mt-4 block text-center bg-indigo-600 text-white py-2 rounded-lg"><i class="fa-solid fa-location-dot mr-2"></i>Ver Localização no Mapa</a>` : `<p class="text-gray-400 text-xs italic mt-4">Localização não capturada</p>`;
+
+      content.innerHTML = `
+        <div class="h-48 w-full bg-gray-200">
+          ${t.foto ? `<img src="${t.foto}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center"><i class="fa-solid fa-image text-4xl text-gray-400"></i></div>`}
+        </div>
+          <div class="h-48 w-full bg-gray-200"> 
+          ${t.foto_doc ? `<img src="${t.foto_doc}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center"><i class="fa-solid fa-image text-4xl text-gray-400"></i></div>`}
+        </div>
+        <div class="p-6">
+          <h3 class="text-xl font-bold text-gray-800">${t.motorista}</h3>
+          <p class="text-sm text-gray-500">Status: ${t.status}</p>
+          <div class="mt-4 grid grid-cols-2 gap-4 text-sm">
+            <div class="bg-slate-50 p-3 rounded"><strong>Placa do Carro:</strong><br>${t.placa_carro}</div>
+            <div class="bg-slate-50 p-3 rounded"><strong>Transportadora:</strong><br>${t.transportadora}</div>
+          </div>
+          ${geoHtml}
+        </div>
+      `;
+      modal.classList.remove('hidden');
+    };
+
+    window.avancarStatus = async (id, next) => {
+      await update(ref(db, `transportes/${id}`), { status: next });
+    };
+
+    window.limparChat = async (room) => {
+      if(confirm('Limpar todas as mensagens deste canal?')) await remove(ref(db, `chat/${room}`));
+    };
+
+    window.toggleBan = async (status) => {
+      const login = document.getElementById('ban_user').value.trim();
+      if(!login) return;
+      await update(ref(db, `users/${login}`), { banned: status });
+      alert(`Usuário ${login} ${status ? 'Banido' : 'Desbanido'}`);
+    };
+
+    document.getElementById('user-form').onsubmit = async (e) => {
+      e.preventDefault();
+      const u = document.getElementById('new_user').value;
+      const p = document.getElementById('new_pass').value;
+      const r = document.getElementById('new_role').value;
+      const colaborador = document.getElementById('new_colaborador').value;
+      const fotoFile = document.getElementById('new_foto_upload').files[0];
+      const transportadora = document.getElementById('new_transportadora').value;
+      
+      let avatar = `https://ui-avatars.com/api/?name=${u}&background=random`;
+      
+      // Se houver arquivo de foto, converter para base64
+      if (fotoFile) {
+        avatar = await resizeImg(fotoFile);
+      }
+      
+      const userData = { password: p, role: r, avatar, colaborador };
+      if (r === 'visualizacao' && transportadora) {
+        userData.transportadora = transportadora;
+      }
+      
+      await set(ref(db, `users/${u}`), userData);
+      alert('OK!'); 
+      e.target.reset();
+      document.getElementById('new_transportadora').classList.add('hidden');
+    };
+
+    // Mostrar/esconder seletor de transportadora baseado na role
+    document.getElementById('new_role').addEventListener('change', (e) => {
+      const selectTransportadora = document.getElementById('new_transportadora');
+      if (e.target.value === 'visualizacao') {
+        selectTransportadora.classList.remove('hidden');
+      } else {
+        selectTransportadora.classList.add('hidden');
+      }
+    });
+
+    document.getElementById('btn-report').onclick = () => {
+      const text = `*EVO Logística*%0A*Total:* ${stats.total}%0A*Aguardando:* ${stats.aguardando}%0A*Finalizado:* ${stats.finalizado}`;
+      window.open(`https://wa.me/?text=${text}`);
+    };
+  </script>
+</body>
+</html>

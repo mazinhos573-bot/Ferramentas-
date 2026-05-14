@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EVO Transportes - Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-900 h-screen flex items-center justify-center p-4 font-[Inter]">
+
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+    <div class="bg-indigo-600 p-8 text-center text-white">
+      <i class="fa-solid fa-truck-fast text-4xl mb-4"></i>
+      <h1 class="text-2xl font-bold">EVO Transportes</h1>
+    </div>
+    
+    <div class="p-8">
+      <form id="login-form" class="space-y-5">
+        <div id="error-msg" class="hidden bg-red-50 text-red-600 p-3 rounded-lg text-xs flex items-center gap-2">
+          <i class="fa-solid fa-circle-exclamation"></i>
+          <span id="err-text">Credenciais inválidas.</span>
+        </div>
+        
+        <input type="text" id="username" class="w-full p-2.5 border rounded-lg" placeholder="Usuário" required>
+        <input type="password" id="password" class="w-full p-2.5 border rounded-lg" placeholder="Senha" required>
+
+        <button type="submit" id="btn-login" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 transition">
+          Entrar no Sistema
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script type="module">
+    import { db, ref, get, child } from './bd.js';
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const user = document.getElementById('username').value.trim();
+      const pass = document.getElementById('password').value.trim();
+      const btn = document.getElementById('btn-login');
+      const errorMsg = document.getElementById('error-msg');
+
+      btn.disabled = true;
+      errorMsg.classList.add('hidden');
+
+      try {
+        const snapshot = await get(child(ref(db), `users/${user}`));
+        if (snapshot.exists()) {
+          const userData = snapshot.val();
+          if (userData.banned) {
+             document.getElementById('err-text').textContent = "Conta suspensa pelo administrador.";
+             errorMsg.classList.remove('hidden');
+             btn.disabled = false;
+             return;
+          }
+          if (userData.password === pass) {
+            localStorage.setItem('evo_user', JSON.stringify({ 
+              username: user, 
+              role: userData.role, 
+              avatar: userData.avatar 
+            }));
+            
+            if (userData.role === 'admin') window.location.href = 'gerenciamento.html';
+            else if (userData.role === 'portaria') window.location.href = 'portaria.html';
+            else if (userData.role === 'visualizacao') window.location.href = 'visualizacao.html';
+            else window.location.href = 'motorista.html';
+            return;
+          }
+        }
+        throw new Error('Invalid');
+      } catch (error) {
+        errorMsg.classList.remove('hidden');
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel do Motorista | EVO</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-50 font-[Inter] h-screen flex overflow-hidden">
+
+  <div class="flex-1 flex flex-col min-w-0 overflow-y-auto">
+    <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
+      <div class="px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+          <div class="bg-indigo-600 p-2 rounded-lg">
+            <i class="fa-solid fa fa-truck text-white"></i>
+          </div>
+          <h1 class="text-xl font-bold text-slate-800">Portal do Motorista</h1>
+        </div>
+        <div class="flex items-center gap-4">
+          <label for="input-avatar" class="cursor-pointer group relative">
+            <img id="user-avatar-img" src="" class="w-8 h-8 rounded-full object-cover border border-indigo-200">
+            <input type="file" id="input-avatar" class="hidden" accept="image/*">
+          </label>
+          <button id="btn-logout" class="text-gray-500 hover:text-red-600 transition-colors"><i class="fa-solid fa-right-from-bracket mr-2"></i>Sair</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="p-6 max-w-6xl mx-auto w-full">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Formulário -->
+        <div class="lg:col-span-2">
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+            <h2 class="text-lg font-semibold text-gray-800 mb-6 border-b pb-2">Registro de Entrada</h2>
+            
+            <form id="driver-form" class="space-y-6">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="col-span-2">
+                  <label class="block text-sm font-medium text-gray-700">Nome Completo</label>
+                  <input type="text" id="nome" class="w-full rounded-lg border-gray-300 border p-2.5 outline-none focus:ring-2 focus:ring-indigo-500" required>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700">Transportadora</label>
+                  <input type="text" id="transportadora" class="w-full rounded-lg border-gray-300 border p-2.5 outline-none focus:ring-2 focus:ring-indigo-500" required>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700">Placa do Carro</label>
+                  <input type="text" id="placa_carro" class="w-full rounded-lg border-gray-300 border p-2.5 uppercase" required>
+                </div>
+                <div class="col-span-2">
+                  <label class="block text-sm font-medium text-gray-700">Foto do Carro</label>
+                  <input type="file" id="foto" accept="image/*" class="w-full p-2 border rounded-lg text-sm">
+                </div>
+                <div class="col-span-2">
+                  <label class="block text-sm font-medium text-gray-700">Foto do Documento</label>
+                  <input type="file" id="foto_doc" accept="image/*" class="w-full p-2 border rounded-lg text-sm">
+                </div>
+              </div>
+              <button type="submit" id="btn-submit" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 transition shadow-md">
+                De Acordo - Enviar para Portaria
+              </button>
+            </form>
+          </div>
+
+          <!-- Tabela de Registros -->
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mt-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Meus Registros</h2>
+            <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50 text-xs text-gray-500 uppercase">
+                  <tr>
+                    <th class="px-4 py-3 text-left">Motorista</th>
+                    <th class="px-4 py-3 text-left">Placa</th>
+                    <th class="px-4 py-3 text-left">Status</th>
+                    <th class="px-4 py-3 text-center">Ação</th>
+                  </tr>
+                </thead>
+                <tbody id="tabela-registros" class="divide-y divide-gray-200"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Painel Lateral - Alertas -->
+        <div class="space-y-6">
+          <div class="bg-green-50 border border-green-200 rounded-2xl p-6">
+            <h3 class="text-lg font-bold text-green-800 mb-4"><i class="fa-solid fa-bell mr-2"></i>Status de Liberação</h3>
+            <div id="alerts-container" class="space-y-3 text-sm">
+              <p class="text-gray-500 italic">Aguardando atualizações...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <aside id="chat-container" class="w-96 flex-shrink-0 hidden md:block z-20"></aside>
+
+  <script type="module">
+    import { checkAuth, logout } from './auth.js';
+    import { initChat } from './chat.js';
+    import { db, ref, push, update, onValue, serverTimestamp } from './bd.js';
+
+    const user = checkAuth('any');
+    document.getElementById('btn-logout').addEventListener('click', logout);
+    document.getElementById('user-avatar-img').src = user.avatar;
+    initChat(user, 'chat-container', 'motorista');
+
+    const resizeImage = (file, width = 600) => {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = width;
+            const scaleSize = MAX_WIDTH / img.width;
+            canvas.width = MAX_WIDTH;
+            canvas.height = img.height * scaleSize;
+            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL('image/jpeg', 0.6));
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    };
+
+    // Alterar foto do perfil
+    document.getElementById('input-avatar').addEventListener('change', async (e) => {
+      if (e.target.files[0]) {
+        const base64 = await resizeImage(e.target.files[0], 200);
+        await update(ref(db, `users/${user.username}`), { avatar: base64 });
+        user.avatar = base64;
+        localStorage.setItem('evo_user', JSON.stringify(user));
+        location.reload();
+      }
+    });
+
+    // Carregar registros do usuário
+    const tabelaRegistros = document.getElementById('tabela-registros');
+    const alertsContainer = document.getElementById('alerts-container');
+    
+    const statusConfig = {
+      'aguardando_portaria': { label: 'Aguardando Portaria', color: 'bg-yellow-100 text-yellow-800', icon: 'fa-clock' },
+      'aguardando_descarga': { label: 'Liberado - Pátio', color: 'bg-green-100 text-green-800', icon: 'fa-check' },
+      'descarga_em_andamento': { label: 'Em Descarga', color: 'bg-purple-100 text-purple-800', icon: 'fa-spinner' },
+      'descarga_finalizada': { label: 'Finalizado', color: 'bg-blue-100 text-blue-800', icon: 'fa-check-double' },
+      'liberado': { label: 'Liberado', color: 'bg-green-100 text-green-800', icon: 'fa-check' }
+    };
+
+    let lastStatus = {};
+
+    onValue(ref(db, 'transportes'), (snapshot) => {
+      const data = snapshot.val();
+      tabelaRegistros.innerHTML = '';
+      alertsContainer.innerHTML = '';
+      
+      if (!data) {
+        tabelaRegistros.innerHTML = '<tr><td colspan="4" class="px-4 py-6 text-center text-gray-500">Nenhum registro ainda</td></tr>';
+        return;
+      }
+
+      let hasAlerts = false;
+      Object.entries(data).reverse().forEach(([id, t]) => {
+        // Mostrar apenas registros do usuário atual
+        if (t.criado_por === user.username) {
+          const config = statusConfig[t.status] || { label: t.status, color: 'bg-gray-100 text-gray-800', icon: 'fa-info' };
+          
+          // Detectar mudança de status para alertar
+          if (lastStatus[id] && lastStatus[id] !== t.status && t.status === 'aguardando_descarga') {
+            hasAlerts = true;
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'bg-green-100 border border-green-300 p-3 rounded-lg';
+            alertDiv.innerHTML = `<i class="fa-solid fa-check-circle text-green-600 mr-2"></i><strong>${t.motorista}</strong> foi liberado!`;
+            alertsContainer.appendChild(alertDiv);
+          }
+          lastStatus[id] = t.status;
+
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-slate-50 transition';
+          tr.innerHTML = `
+            <td class="px-4 py-3 text-sm font-medium">${t.motorista}</td>
+            <td class="px-4 py-3 text-xs text-gray-500">${t.placa_carro}</td>
+            <td class="px-4 py-3"><span class="${config.color} px-2 py-0.5 rounded text-[10px] font-bold"><i class="fa-solid ${config.icon} mr-1"></i>${config.label}</span></td>
+            <td class="px-4 py-3 text-center">
+              ${t.status === 'aguardando_descarga' ? `<button onclick="window.confirmarDescarga('${id}')" class="bg-purple-600 hover:bg-purple-700 text-white text-[10px] px-3 py-1 rounded">Iniciar Descarga</button>` : ''}
+              ${t.status === 'descarga_em_andamento' ? `<button onclick="window.finalizarDescarga('${id}')" class="bg-blue-600 hover:bg-blue-700 text-white text-[10px] px-3 py-1 rounded">Finalizar</button>` : ''}
+              ${(t.status === 'aguardando_portaria' || t.status === 'descarga_finalizada') ? '<span class="text-gray-400 text-xs">-</span>' : ''}
+            </td>
+          `;
+          tabelaRegistros.appendChild(tr);
+        }
+      });
+
+      if (!hasAlerts) {
+        alertsContainer.innerHTML = '<p class="text-gray-500 italic text-sm">Nenhuma atualização no momento</p>';
+      }
+    });
+
+    window.confirmarDescarga = async (id) => {
+      if (confirm('Iniciar descarga deste veículo?')) {
+        await update(ref(db, `transportes/${id}`), { status: 'descarga_em_andamento' });
+      }
+    };
+
+    window.finalizarDescarga = async (id) => {
+      if (confirm('Finalizar descarga?')) {
+        await update(ref(db, `transportes/${id}`), { status: 'descarga_finalizada' });
+      }
+    };
+
+    document.getElementById('driver-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btn-submit');
+      btn.disabled = true;
+      btn.innerHTML = 'Obtendo localização...';
+
+      let location = { lat: null, lng: null };
+      try {
+        const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, {timeout: 5000}));
+        location.lat = pos.coords.latitude;
+        location.lng = pos.coords.longitude;
+      } catch (e) { console.warn('Localização negada'); }
+
+      const fotoInput = document.getElementById('foto');
+      let fotoBase64 = fotoInput.files[0] ? await resizeImage(fotoInput.files[0]) : null;
+      const fotoDocInput = document.getElementById('foto_doc');
+      let fotoDocBase64 = fotoDocInput.files[0] ? await resizeImage(fotoDocInput.files[0]) : null;
+
+      try {
+        await push(ref(db, 'transportes'), {
+          motorista: document.getElementById('nome').value,
+          transportadora: document.getElementById('transportadora').value,
+          placa_carro: document.getElementById('placa_carro').value.toUpperCase(),
+          foto: fotoBase64,
+          foto_doc: fotoDocBase64,
+          lat: location.lat,
+          lng: location.lng,
+          status: 'aguardando_portaria',
+          criado_por: user.username,
+          timestamp: serverTimestamp()
+        });
+        alert('Registrado! Seu registro foi enviado para a portaria.');
+        e.target.reset();
+      } catch (err) { alert('Erro ao registrar.'); }
+      finally { btn.disabled = false; btn.innerHTML = 'De Acordo - Enviar para Portaria'; }
+    });
+  </script>
+</body>
+</html>
