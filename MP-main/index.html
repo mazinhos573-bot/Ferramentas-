@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema de Rotas CDC Barueri</title>
+<link rel="shortcut icon" href="./img/logo1.ico" type="image/x-icon">
+
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Routing Machine -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css"/>
+<script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+
+<!-- Bootstrap -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Fonte -->
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;600;700&display=swap" rel="stylesheet">
+
+<style>
+body {
+    font-family: 'Roboto', sans-serif;
+    background: linear-gradient(135deg, #f5f7fb 0%, #eef4ff 100%);
+    margin: 0;
+    color: #1f2a44;
+}
+header {
+    background: linear-gradient(90deg, #004aad 0%, #0a66c2 100%);
+    color: #fff;
+    padding: 24px 20px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+header img {
+    max-height: 60px;
+    margin-bottom: 10px;
+}
+header h1 {
+    font-size: 1.8rem;
+    margin-bottom: 6px;
+}
+header p {
+    margin: 0;
+    opacity: 0.95;
+}
+#map {
+    height: 720px;
+    width: 100%;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+.container {
+    max-width: 1440px;
+    margin-top: 22px;
+}
+.card {
+    border: 0;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+}
+.btn-primary {
+    background-color: #004aad;
+    border: none;
+}
+.btn-primary:hover {
+    background-color: #003087;
+}
+.btn-outline-primary {
+    color: #004aad;
+    border-color: #004aad;
+}
+.btn-outline-primary:hover {
+    background-color: #004aad;
+    color: white;
+}
+footer {
+    background-color: #004aad;
+    color: white;
+    text-align: center;
+    padding: 16px;
+    margin-top: 24px;
+}
+.status-pill {
+    background: #eaf3ff;
+    color: #004aad;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+.location-card {
+    background: #f4f8ff;
+    border: 1px solid #dce8ff;
+    border-radius: 12px;
+    padding: 12px;
+}
+.dc-item {
+    text-align: left;
+    border-radius: 10px;
+    padding: 10px 12px;
+    transition: all 0.2s ease;
+}
+.dc-item.active {
+    background-color: #004aad;
+    color: white;
+    border-color: #004aad;
+}
+.alert {
+    border-radius: 10px;
+}
+.autocomplete-list {
+    position: absolute;
+    z-index: 1000;
+    width: 100%;
+    background: white;
+    border: 1px solid #dce8ff;
+    border-radius: 8px;
+    max-height: 220px;
+    overflow-y: auto;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+}
+.autocomplete-item {
+    padding: 8px 10px;
+    cursor: pointer;
+}
+.autocomplete-item:hover {
+    background-color: #e9f0ff;
+}
+</style>
+
+</head>
+<body>
+
+<header>
+    <img src="./img/logo2.0.png" alt="Logo CDC">
+    <h1>Sistema de Mapeamento de Rotas - CDC Barueri</h1>
+    <p>Visualize e calcule as rotas para Centros de Distribuição em todo o Brasil</p>
+</header>
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-8">
+            <div id="map"></div>
+        </div>
+        <div class="col-md-4">
+            <div class="card p-3 position-relative">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h4 class="mb-1">Localização e rotas</h4>
+                        <p class="text-muted small mb-0">Escolha um centro, pesquise uma cidade ou use sua localização.</p>
+                    </div>
+                    <span class="status-pill">Atualização ao vivo</span>
+                </div>
+
+                <div class="position-relative mb-3">
+                    <input type="text" id="cidade-input" class="form-control" placeholder="Digite a cidade (ex: São Paulo)">
+                    <div id="autocomplete-list" class="autocomplete-list" style="display:none"></div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="dc-select" class="form-label fw-semibold">Centro de distribuição</label>
+                    <select id="dc-select" class="form-select">
+                        <option value="">Selecione um centro...</option>
+                    </select>
+                </div>
+
+                <div class="d-grid gap-2 mb-3">
+                    <button class="btn btn-primary" id="search-btn">Buscar CD/RDC mais próximo</button>
+                    <button class="btn btn-outline-primary" id="geo-btn">Usar minha localização</button>
+                </div>
+
+                <div class="d-flex gap-2 mb-3">
+                    <button class="btn btn-secondary flex-fill" id="reset-btn">Voltar ao CDC</button>
+                    <button class="btn btn-outline-secondary flex-fill" id="clear-route-btn">Limpar rota</button>
+                </div>
+
+                <div id="location-status" class="location-card mb-3">
+                    <div class="fw-semibold">Status da localização</div>
+                    <div class="small text-muted" id="location-text">Aguardando atualização...</div>
+                </div>
+
+                <div id="info" class="alert alert-info" style="display:none"></div>
+                <h5 class="mb-2">Centros de Distribuição</h5>
+                <div id="dc-list" class="d-flex flex-column gap-2"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer>
+    <p>© 2025 SR - Sistema de Rotas CDC Barueri. Desenvolvido por 
+        <a href="mailto:ericlm.evo@gmail.com" class="text-white fw-bold">ERICLM.EVO</a></p>
+</footer>
+
+<script>
+const ORIGIN = { lat: -23.51098808270105, lon: -46.904364373444906, name: "CDC-SP = CDC Barueri", address: "Av. Pref. João Vila-Lobos Quero - Jardim Belval, Barueri - SP, 06422-060" };
+
+const DCS = [
+    { name: "RDC-SP2", lat: -23.512542503814775, lon: -46.90414979673441, address: "Av. Pref. João Vila-Lobos Quero - Jardim Belval, Barueri - SP, 06422-060" },
+    { name: "DC-SP3", lat: -21.170401, lon: -47.810324, address: "Ribeirão Preto, SP" },
+    { name: "DC-MG2", lat: -22.227077, lon: -45.939373, address: "Pouso Alegre, MG" },
+    { name: "RDC-BA1", lat: -12.259727, lon: -38.964661, address: "Feira de Santana, BA" },
+    { name: "RDC-PR1", lat: -25.441105, lon: -49.276855, address: "Curitiba, PR" },
+    { name: "RDC-MG1", lat: -19.912998, lon: -43.940933, address: "Belo Horizonte, MG" },
+    { name: "DC-BA3", lat: -14.861924, lon: -40.844535, address: "Vitória da Conquista, BA" },
+    { name: "DC-PI2", lat: -5.092011, lon: -42.803760, address: "Teresina, PI" },
+    { name: "DC-PR2", lat: -23.31028, lon: -51.16278, address: "Londrina, PR" },
+    { name: "DC-GO2", lat: -16.665136, lon: -49.286041, address: "Goiânia, GO" },
+    { name: "DC-MS1", lat: -20.469711, lon: -54.620121, address: "Campo Grande, MS" },
+    { name: "DC-RS2", lat: -30.033056, lon: -51.230000, address: "Porto Alegre, RS" },
+    { name: "DC-BA4", lat: -12.15278, lon: -44.99, address: "Barreiras, BA" },
+    { name: "DC-PA4", lat: -1.455833, lon: -48.503887, address: "Belém, PA" },
+    { name: "DC-PA5", lat: -5.381133, lon: -49.133105, address: "Marabá, PA" },
+    { name: "DC-AM2", lat: -3.10719, lon: -60.0261, address: "Manaus, AM" }
+];
+
+const map = L.map('map').setView([-14.5, -53.0], 5);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+const originIcon = L.icon({ iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png', iconSize: [32, 32] });
+const dcIcon = L.icon({ iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png', iconSize: [25, 41] });
+const cityIcon = L.icon({
+    iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
+    iconSize: [38, 38],
+    iconAnchor: [19, 38],
+    popupAnchor: [0, -38]
+});
+
+const originMarker = L.marker([ORIGIN.lat, ORIGIN.lon], { icon: originIcon }).addTo(map).bindPopup(`<b>${ORIGIN.name}</b><br>${ORIGIN.address}`);
+const list = document.getElementById('dc-list');
+const select = document.getElementById('dc-select');
+const input = document.getElementById('cidade-input');
+const autocompleteList = document.getElementById('autocomplete-list');
+const infoBox = document.getElementById('info');
+const locationText = document.getElementById('location-text');
+
+let selectedDc = null;
+let currentLocation = null;
+let userMarker = null;
+let cityMarker = null;
+let watchId = null;
+const dcMarkers = [];
+
+function renderDcOptions() {
+    DCS.forEach((dc, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = `${dc.name} — ${dc.address}`;
+        select.appendChild(option);
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'btn btn-outline-primary dc-item';
+        button.innerHTML = `<span class="fw-semibold">${dc.name}</span><br><small>${dc.address}</small>`;
+        button.addEventListener('click', () => selectDc(dc, index));
+        list.appendChild(button);
+
+        const marker = L.marker([dc.lat, dc.lon], { icon: dcIcon }).addTo(map).bindPopup(`<b>${dc.name}</b><br>${dc.address}`);
+        dcMarkers.push(marker);
+    });
+}
+
+function updateSelection(index) {
+    const buttons = document.querySelectorAll('.dc-item');
+    buttons.forEach((button, buttonIndex) => {
+        button.classList.toggle('active', buttonIndex === index);
+    });
+}
+
+function selectDc(dc, index) {
+    selectedDc = dc;
+    select.value = index;
+    updateSelection(index);
+    map.setView([dc.lat, dc.lon], 8);
+    dcMarkers[index].openPopup();
+    showRoute([dc.lat, dc.lon], dc.name);
+}
+
+function showRoute(destination, name) {
+    if (window.route) {
+        map.removeControl(window.route);
+    }
+
+    const startPoint = currentLocation ? [currentLocation.lat, currentLocation.lon] : [ORIGIN.lat, ORIGIN.lon];
+    const route = L.Routing.control({
+        waypoints: [
+            L.latLng(startPoint[0], startPoint[1]),
+            L.latLng(destination[0], destination[1])
+        ],
+        createMarker: function() { return null; },
+        routeWhileDragging: false,
+        show: false,
+        addWaypoints: false,
+        fitSelectedRoutes: true
+    }).addTo(map);
+
+    window.route = route;
+
+    route.on('routesfound', function(e) {
+        const routeInfo = e.routes[0];
+        infoBox.style.display = 'block';
+
+        const distanceKm = (routeInfo.summary.totalDistance / 1000).toFixed(1);
+        const totalSeconds = routeInfo.summary.totalTime;
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        let timeString = '';
+        if (hours > 0) {
+            timeString = `${hours} hora${hours > 1 ? 's' : ''}`;
+            if (minutes > 0) {
+                timeString += ` e ${minutes} minuto${minutes > 1 ? 's' : ''}`;
+            }
+        } else {
+            timeString = `${minutes} minuto${minutes !== 1 ? 's' : ''}`;
+        }
+
+        const originLabel = currentLocation ? 'Sua localização' : ORIGIN.name;
+        infoBox.innerHTML = `<strong>${name}</strong><br>Origem: ${originLabel}<br>Distância: ${distanceKm} km<br>Tempo estimado: ${timeString}`;
+    });
+}
+
+function updateLiveLocation(position, label = 'Sua localização') {
+    const lat = position.coords.latitude;
+    const lon = position.coords.longitude;
+    currentLocation = { lat, lon, label };
+
+    if (userMarker) {
+        userMarker.setLatLng([lat, lon]);
+    } else {
+        userMarker = L.marker([lat, lon], { icon: cityIcon }).addTo(map).bindPopup(`<b>${label}</b>`);
+    }
+
+    locationText.innerHTML = `${lat.toFixed(4)}°, ${lon.toFixed(4)}°<br><span class="text-muted">Atualizado agora</span>`;
+
+    if (selectedDc) {
+        showRoute([selectedDc.lat, selectedDc.lon], selectedDc.name);
+    }
+}
+
+function startLiveLocation() {
+    if (!navigator.geolocation) {
+        alert('Geolocalização não disponível no seu navegador.');
+        return;
+    }
+
+    if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+    }
+
+    navigator.geolocation.getCurrentPosition(function(position) {
+        updateLiveLocation(position);
+        map.setView([currentLocation.lat, currentLocation.lon], 12);
+    }, function() {
+        locationText.textContent = 'Não foi possível obter a localização automaticamente.';
+    }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 10000 });
+
+    watchId = navigator.geolocation.watchPosition(function(position) {
+        updateLiveLocation(position);
+    }, function() {
+        locationText.textContent = 'O rastreamento de localização foi interrompido.';
+    }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 10000 });
+}
+
+function findNearestDc(lat, lon) {
+    let nearest = DCS[0];
+    let smallestDistance = Number.POSITIVE_INFINITY;
+
+    DCS.forEach((dc, index) => {
+        const distance = Math.hypot(dc.lat - lat, dc.lon - lon);
+        if (distance < smallestDistance) {
+            smallestDistance = distance;
+            nearest = dc;
+        }
+    });
+
+    return nearest;
+}
+
+async function searchCity(query) {
+    try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=1&limit=5`);
+        const data = await res.json();
+
+        if (!data.length) {
+            alert('Nenhuma cidade foi encontrada.');
+            return;
+        }
+
+        const item = data[0];
+        const lat = parseFloat(item.lat);
+        const lon = parseFloat(item.lon);
+
+        if (cityMarker) {
+            map.removeLayer(cityMarker);
+        }
+
+        cityMarker = L.marker([lat, lon], { icon: cityIcon }).addTo(map).bindPopup(`<b>${item.display_name}</b>`);
+        map.setView([lat, lon], 10);
+
+        const nearestDc = findNearestDc(lat, lon);
+        const index = DCS.findIndex(dc => dc.name === nearestDc.name);
+        selectDc(nearestDc, index);
+        input.value = item.display_name;
+        autocompleteList.style.display = 'none';
+    } catch (error) {
+        console.error(error);
+        alert('Não foi possível buscar a cidade no momento.');
+    }
+}
+
+renderDcOptions();
+
+select.addEventListener('change', function() {
+    const index = Number(this.value);
+    if (!Number.isNaN(index) && DCS[index]) {
+        selectDc(DCS[index], index);
+    }
+});
+
+document.getElementById('geo-btn').addEventListener('click', startLiveLocation);
+
+document.getElementById('reset-btn').addEventListener('click', function() {
+    if (currentLocation) {
+        map.setView([currentLocation.lat, currentLocation.lon], 10);
+    } else {
+        map.setView([ORIGIN.lat, ORIGIN.lon], 5);
+    }
+    if (window.route) {
+        map.removeControl(window.route);
+        window.route = null;
+    }
+    infoBox.style.display = 'none';
+});
+
+document.getElementById('clear-route-btn').addEventListener('click', function() {
+    if (window.route) {
+        map.removeControl(window.route);
+        window.route = null;
+    }
+    infoBox.style.display = 'none';
+    input.value = '';
+    autocompleteList.style.display = 'none';
+});
+
+document.getElementById('search-btn').addEventListener('click', function() {
+    const query = input.value.trim();
+    if (!query) {
+        alert('Digite uma cidade para buscar.');
+        return;
+    }
+    searchCity(query);
+});
+
+input.addEventListener('input', async function() {
+    const query = input.value.trim();
+    if (query.length > 2) {
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=1&limit=5`);
+            const data = await res.json();
+            autocompleteList.innerHTML = '';
+            data.forEach(item => {
+                const div = document.createElement('div');
+                div.classList.add('autocomplete-item');
+                div.textContent = item.display_name;
+                div.onclick = () => {
+                    input.value = item.display_name;
+                    autocompleteList.style.display = 'none';
+                    const lat = parseFloat(item.lat);
+                    const lon = parseFloat(item.lon);
+                    if (cityMarker) {
+                        map.removeLayer(cityMarker);
+                    }
+                    cityMarker = L.marker([lat, lon], { icon: cityIcon }).addTo(map).bindPopup(`<b>${item.display_name}</b>`);
+                    map.setView([lat, lon], 10);
+                    const nearestDc = findNearestDc(lat, lon);
+                    const index = DCS.findIndex(dc => dc.name === nearestDc.name);
+                    selectDc(nearestDc, index);
+                };
+                autocompleteList.appendChild(div);
+            });
+            autocompleteList.style.display = 'block';
+        } catch (error) {
+            console.error(error);
+        }
+    } else {
+        autocompleteList.style.display = 'none';
+    }
+});
+</script>
+</body>
+</html>
