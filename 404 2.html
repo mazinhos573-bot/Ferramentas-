@@ -29,7 +29,7 @@ body{
 }
 
 .container img{
-    width: 150px;;
+    width: 130px;;
     max-width:100%;
     margin-bottom:20px;
 }
@@ -103,13 +103,31 @@ footer{
         A página que você tentou acessar não existe ou foi removida.
     </p>
 
-    <a href="https://wa.me/5511030089968?text=Ol%C3%A1%2C%20gostaria%20de%20valida%C3%A7%C3%A3o%20referente%20ao%20sistema%2C%20o%20mesmo%20est%C3%A1%20com%20erro%20404" target="_blank" rel="noopener noreferrer" aria-label="Entrar em contato pelo WhatsApp">✆</a>
+    <a id="whatsappBtn" href="#" target="_blank" rel="noopener noreferrer" aria-label="Entrar em contato pelo WhatsApp">✆</a>
 
 </div>
 
 <footer>
-    © 2026 ERICLM.EVO RDC BARUERI. Todos os direitos reservados.
+    <span id="footerSystem"></span>
 </footer>
+
+<script>
+const sistema = 'TRANSPORTE';
+
+function atualizarMensagemWhatsApp() {
+    const footer = document.getElementById('footerSystem');
+    const botao = document.getElementById('whatsappBtn');
+
+    if (!footer || !botao) return;
+
+    footer.textContent = `© 2026 ERICLM.EVO, sistema: ${sistema}. Todos os direitos reservados.`;
+
+    const mensagem = `Olá, gostaria de validação referente ao sistema ${sistema}, o mesmo está com erro 404`;
+    botao.href = `https://wa.me/5511030089968?text=${encodeURIComponent(mensagem)}`;
+}
+
+document.addEventListener('DOMContentLoaded', atualizarMensagemWhatsApp);
+</script>
 
 </body>
 </html>
